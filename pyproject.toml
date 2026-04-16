@@ -1,0 +1,13 @@
+[project]
+name = "skill-project"
+version = "0.1.0"
+description = "Minimal deepagents skill verification project"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "deepagents>=0.3.0",
+    "fastapi>=0.116.0",
+    "langchain-openai>=0.3.0",
+    "requests>=2.33.1",
+    "uvicorn>=0.35.0",
+]
