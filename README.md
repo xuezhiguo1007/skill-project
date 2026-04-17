@@ -13,10 +13,10 @@
 - `skill_project/api/schemas.py`: API 请求/响应模型
 - `skill_project/api/lifespan.py`: 生命周期管理
 - `skill_project/services/skill_service.py`: skill 调用与场景执行逻辑
-- `skills/release-notes`: 中文版本发布说明 skill
-- `skills/support-triage`: 中文客服分诊 skill
-- `data/releases/change-log.md`: 发布说明场景的中文输入数据
-- `data/support/refund-policy.md`: 客服退款场景的中文策略数据
+- `skills/travel-itinerary`: 中文旅游行程规划 skill
+- `skills/travel-shopping`: 中文旅游商品推荐 skill
+- `data/travel/destination-guide.md`: 行程规划场景的中文输入数据
+- `data/travel/shopping-guide.md`: 商品推荐场景的中文输入数据
 
 ## 安装依赖
 
@@ -59,7 +59,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/validate-skill \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-4.1-mini",
-    "prompt": "请读取 data/releases/change-log.md，生成一份面向客户的中文发布说明"
+    "prompt": "请读取 data/travel/destination-guide.md，为情侣设计一份北海涠洲岛四天三晚行程"
   }'
 ```
 
@@ -69,7 +69,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/validate-skill \
 curl -X POST http://127.0.0.1:8000/api/v1/run-scenario \
   -H "Content-Type: application/json" \
   -d '{
-    "scenario": "support"
+    "scenario": "shopping"
   }'
 ```
 
@@ -89,29 +89,29 @@ curl -X POST http://127.0.0.1:8000/api/v1/run-scenario \
 UV_CACHE_DIR=/tmp/uv-cache uv run python main.py list-skills
 ```
 
-## 验证场景 1: 命中 `release-notes` skill
+## 验证场景 1: 命中 `travel-itinerary` skill
 
 ```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario release
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario itinerary
 ```
 
 预期现象：
 
-- 结果结构会遵循 `skills/release-notes/template.md`
-- 内容会基于 `data/releases/change-log.md`
-- 输出会是中文、面向客户的版本说明
+- 结果结构会遵循 `skills/travel-itinerary/template.md`
+- 内容会基于 `data/travel/destination-guide.md`
+- 输出会是中文、可执行的逐日旅行计划
 
-## 验证场景 2: 命中 `support-triage` skill
+## 验证场景 2: 命中 `travel-shopping` skill
 
 ```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario support
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario shopping
 ```
 
 预期现象：
 
-- 代理会处理退款判断和客服回复
-- 输出结构会遵循 `skills/support-triage/response-template.md`
-- 退款结论会参考 `data/support/refund-policy.md`
+- 代理会处理旅行商品推荐和预算取舍
+- 输出结构会遵循 `skills/travel-shopping/recommendation-template.md`
+- 推荐内容会参考 `data/travel/shopping-guide.md`
 
 ## 验证场景 3: 模拟连续调用两个 skills
 
@@ -121,16 +121,16 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario dual-skills
 
 预期现象：
 
-- 输出中会同时包含“版本发布说明”和“客服回复方案”两部分
-- 第一部分会参考 `release-notes` skill
-- 第二部分会参考 `support-triage` skill
+- 输出中会同时包含“旅游行程规划”和“旅游商品推荐”两部分
+- 第一部分会参考 `travel-itinerary` skill
+- 第二部分会参考 `travel-shopping` skill
 
 ## 自定义提示词
 
 ```bash
 UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run \
-  --scenario release \
-  --prompt "请读取 data/releases/change-log.md，并写一份更偏产品宣传风格的中文发布说明"
+  --scenario itinerary \
+  --prompt "请读取 data/travel/destination-guide.md，为亲子家庭写一份北海涠洲岛四日轻松行程"
 ```
 
 ## 说明

@@ -12,7 +12,12 @@ from skill_project.api.schemas import (
     ValidationResult,
 )
 from skill_project.core.config import SETTINGS
-from skill_project.services.skill_service import SCENARIOS, list_skills, run_scenario, run_validation
+from skill_project.services.skill_service import (
+    SCENARIOS,
+    list_skills,
+    run_scenario,
+    run_validation,
+)
 
 app = FastAPI(
     title=SETTINGS.api_title,
