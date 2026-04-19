@@ -68,3 +68,85 @@ def create_demo_registry() -> SkillRegistry:
             ),
         ]
     )
+
+
+def create_sql_demo_registry() -> SkillRegistry:
+    return SkillRegistry(
+        [
+            SkillSpec(
+                name="sales_analytics",
+                description="分析订单、收入、客单价和时间趋势类 SQL 需求。",
+                when_to_use=(
+                    "用户提到销售额、营收、订单量、按月趋势、Top customers、"
+                    "按地区汇总等分析型 SQL 问题时使用。"
+                ),
+                handler_type="context",
+                trigger_keywords=(
+                    "sales",
+                    "revenue",
+                    "order",
+                    "orders",
+                    "gmv",
+                    "monthly",
+                    "trend",
+                    "customer",
+                    "customers",
+                    "region",
+                    "销售额",
+                    "营收",
+                    "订单",
+                    "趋势",
+                    "客户",
+                    "地区",
+                ),
+                content=(
+                    "# Sales Analytics Skill\n"
+                    "You are working on analytical SQL for business reporting.\n"
+                    "Prefer aggregation queries over raw row dumps.\n"
+                    "Validate the time grain first, then identify metrics, dimensions, "
+                    "and filters before drafting SQL.\n"
+                    "When useful, explain likely tables such as `orders`, `order_items`, "
+                    "`customers`, and `products`."
+                ),
+                context_text=(
+                    "回答时先澄清指标、时间粒度和过滤条件，再给出 SQL 思路。"
+                    "优先生成适合分析的聚合查询，并提示可能涉及的事实表和维表。"
+                ),
+            ),
+            SkillSpec(
+                name="inventory_management",
+                description="处理库存、补货、缺货风险和仓库维度的 SQL 需求。",
+                when_to_use=(
+                    "用户提到库存余量、补货建议、低库存、仓库状态、SKU 库存周转、"
+                    "缺货预警等运维型 SQL 问题时使用。"
+                ),
+                handler_type="context",
+                trigger_keywords=(
+                    "inventory",
+                    "stock",
+                    "warehouse",
+                    "reorder",
+                    "restock",
+                    "sku",
+                    "low stock",
+                    "库存",
+                    "仓库",
+                    "补货",
+                    "缺货",
+                    "sku",
+                ),
+                content=(
+                    "# Inventory Management Skill\n"
+                    "You are working on operational SQL for inventory workflows.\n"
+                    "Focus on current stock, reorder thresholds, warehouse balances, "
+                    "and SKU-level exceptions.\n"
+                    "Highlight joins that commonly involve `inventory`, `warehouses`, "
+                    "`products`, and `purchase_orders`."
+                ),
+                context_text=(
+                    "回答时优先识别库存快照口径、补货阈值和仓库维度。"
+                    "如果需求像运营看板，优先输出按 SKU 或仓库汇总的 SQL。"
+                ),
+            ),
+        ]
+    )

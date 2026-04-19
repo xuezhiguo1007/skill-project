@@ -65,6 +65,7 @@ class LangGraphSkillReq(BaseModel):
     user_request: str = Field(
         ..., description="The user request routed through the LangGraph skill flow."
     )
+    model: str | None = Field(default=None, description="Override the default model.")
 
 
 class ValidationResult(BaseModel):
@@ -79,6 +80,7 @@ class LangGraphSkillResult(BaseModel):
     user_request: str
     available_skills: list[str]
     selected_skill: str | None = None
+    loaded_skills: list[str] = Field(default_factory=list)
     route_reason: str | None = None
     skill_context: str | None = None
     skill_result: str | None = None

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TypedDict
 
+from langchain.agents import AgentState
+
 
 class SkillGraphState(TypedDict, total=False):
     user_request: str
@@ -13,3 +15,9 @@ class SkillGraphState(TypedDict, total=False):
     skill_context: str | None
     skill_result: str | None
     final_response: str | None
+
+
+class SkillAgentState(AgentState, total=False):
+    loaded_skills: list[str]
+    selected_skill: str | None
+    skill_context: str | None

@@ -1,22 +1,151 @@
-# DeepAgents Skills Verification
+# Skill Calling Verification
 
-这个项目基于 `deepagents` 做了一个最小中文示例，用来验证三件事：
+这个项目是一个最小验证仓库，目标不是做完整业务，而是验证两种不同的 `skill` 调用方式：
 
-1. 主代理可以根据任务自动命中本地中文 `skill`
-2. 同一个项目里可以配置多个 `skill`，并通过一个场景模拟连续调用两个 `skill`
-3. 你可以通过 CLI 或 FastAPI 直接触发一次验证
+1. `DeepAgents` 风格：由主代理根据用户任务直接命中本地 skill
+2. `LangChain / LangGraph` 官方风格：通过 on-demand skills 按需加载领域技能，而不是在一开始把全部上下文塞进 system prompt
 
-## 项目结构
+项目里保留了两套示例，方便对比：
 
-- `main.py`: CLI 入口，支持列出 skills 和运行验证场景
-- `skill_project/api/main.py`: FastAPI 入口，结构参考 `enowa-memory`
-- `skill_project/api/schemas.py`: API 请求/响应模型
-- `skill_project/api/lifespan.py`: 生命周期管理
-- `skill_project/services/skill_service.py`: skill 调用与场景执行逻辑
-- `skills/travel-itinerary`: 中文旅游行程规划 skill
-- `skills/travel-shopping`: 中文旅游商品推荐 skill
-- `data/travel/destination-guide.md`: 行程规划场景的中文输入数据
-- `data/travel/shopping-guide.md`: 商品推荐场景的中文输入数据
+- `DeepAgents` 示例偏向“本地 skill 自动命中”
+- `LangGraph` 示例偏向“官方 skill middleware + load_skill 工具 + 按需加载”
+
+## 项目目标
+
+这个仓库主要回答三个问题：
+
+1. 本地 skill 能不能被正确识别和调用
+2. 同一个项目里能不能同时验证不同 skill 框架的调用方式
+3. 如何用 CLI 和 FastAPI 快速跑一遍验证
+
+## 两种 skill 调用方式
+
+### 1. DeepAgents 方式
+
+这一套实现放在 `skill_project/services/skill_service.py` 和 `skills/` 目录。
+
+核心特点：
+
+- 使用 `create_deep_agent(...)`
+- 主代理直接挂载本地 `skills=["/skills"]`
+- 根据 prompt 内容自动命中对应 skill
+- 支持一个请求里触发单 skill 或双 skill 场景
+
+当前示例 skill：
+
+- `skills/travel-itinerary`
+- `skills/travel-shopping`
+
+当前验证接口：
+
+- `POST /api/v1/validate-skill`
+- `POST /api/v1/run-scenario`
+
+适合验证的问题：
+
+- 给一段 prompt，代理是否会命中本地 skill
+- 固定场景下，不同模型是否会稳定走到同一个 skill
+- 一个请求里是否能连续处理两个交付物
+
+### 2. LangChain / LangGraph 官方格式
+
+这一套实现放在 `skill_project/langgraph_skill/` 和 `skill_project/api/langgraph_api.py`。
+
+核心特点：
+
+- 使用 `create_agent(...)`
+- 通过 `SkillMiddleware` 暴露轻量 skill 简介
+- 通过 `load_skill` 工具按需加载 skill 完整内容
+- skill 不会在请求开始时全部注入上下文，而是由 agent 在需要时再加载
+
+当前示例包括两类：
+
+- 旅游 skill demo：`POST /api/v1/langgraph-skill`
+- SQL assistant on-demand skills demo：`POST /api/v1/langgraph-sql-skill`
+
+其中 SQL assistant 示例更接近官方教程的思路：
+
+- 先暴露可用 skill 列表
+- 再由模型决定是否调用 `load_skill`
+- 按需加载 `sales_analytics` 或 `inventory_management`
+
+适合验证的问题：
+
+- agent 是否会在需要时调用 `load_skill`
+- loaded skill 是否能进入当前 agent state
+- 不同领域 skill 是否能被动态切换
+
+## 项目结构图
+
+```text
+skill-project
+├── main.py
+├── skills
+│   ├── travel-itinerary
+│   │   └── SKILL.md
+│   └── travel-shopping
+│       └── SKILL.md
+├── data
+│   └── travel
+│       ├── destination-guide.md
+│       └── shopping-guide.md
+└── skill_project
+    ├── api
+    │   ├── main.py
+    │   ├── deep_agent_api.py
+    │   ├── langgraph_api.py
+    │   └── schemas.py
+    ├── services
+    │   └── skill_service.py
+    ├── llm
+    │   └── openai_client.py
+    └── langgraph_skill
+        ├── agent.py
+        ├── middleware.py
+        ├── tools.py
+        ├── registry.py
+        ├── graph.py
+        ├── service.py
+        ├── state.py
+        └── example_skills
+            └── travel_itinerary.py
+```
+
+## 调用关系图
+
+### DeepAgents 路径
+
+```text
+Client / CLI
+    ↓
+deep_agent_api.py / main.py
+    ↓
+skill_service.py
+    ↓
+create_deep_agent(...)
+    ↓
+本地 skills 目录
+    ├── travel-itinerary
+    └── travel-shopping
+```
+
+### LangGraph 官方风格路径
+
+```text
+Client
+    ↓
+langgraph_api.py
+    ↓
+langgraph_skill/service.py
+    ↓
+create_agent(...)
+    ↓
+SkillMiddleware
+    ↓
+load_skill tool
+    ↓
+按需加载 skill content
+```
 
 ## 安装依赖
 
@@ -26,11 +155,15 @@ UV_CACHE_DIR=/tmp/uv-cache uv sync
 
 ## 配置模型
 
+默认读取 `config/local.toml`。
+
+先编辑配置：
+
 ```bash
 vim config/local.toml
 ```
 
-填入你的模型配置：
+填写模型参数：
 
 ```toml
 [llm]
@@ -39,37 +172,75 @@ openai_api_key = "your_key"
 openai_base_url = ""
 ```
 
-默认读取 `local` 环境配置，也就是 `config/local.toml`。如果你要切环境，设置 `APP_ENV` 即可：
+如果要切换环境，可以设置：
 
 ```bash
 export APP_ENV=dev
 ```
 
-支持的配置环境有：`dev`、`test`、`local`、`prod`。
+支持的环境：
 
-默认模型是配置文件里的 `default_model`，也可以通过 `--model` 覆盖。
+- `dev`
+- `test`
+- `local`
+- `prod`
 
-## 启动 FastAPI
+## 如何运行验证
+
+### 方式一：启动 FastAPI
 
 ```bash
 UV_CACHE_DIR=/tmp/uv-cache uv run uvicorn skill_project.api.main:app --reload
 ```
 
-或者使用和 `enowa-memory` 一致的 `main` 启动方式：
+或者：
 
 ```bash
 UV_CACHE_DIR=/tmp/uv-cache uv run python -m skill_project
 ```
 
-启动后可访问：
+启动后可访问这些接口：
 
 - `GET /health`
 - `GET /api/v1/skills`
 - `GET /api/v1/scenarios`
 - `POST /api/v1/validate-skill`
 - `POST /api/v1/run-scenario`
+- `POST /api/v1/langgraph-skill`
+- `POST /api/v1/langgraph-sql-skill`
 
-直接验证任意提示词：
+### 方式二：使用 CLI 跑 DeepAgents 场景
+
+查看本地 skills：
+
+```bash
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py list-skills
+```
+
+运行预置场景：
+
+```bash
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario itinerary
+```
+
+也可以运行其他场景：
+
+```bash
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario shopping
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario dual-skills
+```
+
+覆盖默认 prompt：
+
+```bash
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run \
+  --scenario itinerary \
+  --prompt "请读取 data/travel/destination-guide.md，为亲子家庭写一份北海涠洲岛四日轻松行程"
+```
+
+## FastAPI 验证示例
+
+### 1. 验证 DeepAgents 自定义 prompt
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/validate-skill \
@@ -80,77 +251,54 @@ curl -X POST http://127.0.0.1:8000/api/v1/validate-skill \
   }'
 ```
 
-场景接口示例：
+### 2. 验证 DeepAgents 预置场景
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/run-scenario \
   -H "Content-Type: application/json" \
   -d '{
-    "scenario": "shopping"
+    "scenario": "dual-skills",
+    "model": "gpt-4.1-mini"
   }'
 ```
 
-双 skill 场景接口示例：
+### 3. 验证 LangGraph 旅游 skill demo
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/run-scenario \
+curl -X POST http://127.0.0.1:8000/api/v1/langgraph-skill \
   -H "Content-Type: application/json" \
   -d '{
-    "scenario": "dual-skills"
+    "user_request": "帮我规划一个四天三晚的海岛旅行，并顺便推荐防晒和伴手礼"
   }'
 ```
 
-## 查看已配置 skills
+### 4. 验证 LangGraph SQL on-demand skills
 
 ```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run python main.py list-skills
+curl -X POST http://127.0.0.1:8000/api/v1/langgraph-sql-skill \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-4.1-mini",
+    "user_request": "帮我写一个按月统计销售额趋势的 SQL"
+  }'
 ```
 
-## 验证场景 1: 命中 `travel-itinerary` skill
+## 预期验证结果
 
-```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario itinerary
-```
+### DeepAgents
 
-预期现象：
+- `validate-skill` 能直接执行自定义 prompt
+- `run-scenario` 会读取服务端预置 prompt 再执行
+- 旅游相关场景应命中 `travel-itinerary` 或 `travel-shopping`
 
-- 结果结构会遵循 `skills/travel-itinerary/template.md`
-- 内容会基于 `data/travel/destination-guide.md`
-- 输出会是中文、可执行的逐日旅行计划
+### LangGraph
 
-## 验证场景 2: 命中 `travel-shopping` skill
-
-```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario shopping
-```
-
-预期现象：
-
-- 代理会处理旅行商品推荐和预算取舍
-- 输出结构会遵循 `skills/travel-shopping/recommendation-template.md`
-- 推荐内容会参考 `data/travel/shopping-guide.md`
-
-## 验证场景 3: 模拟连续调用两个 skills
-
-```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario dual-skills
-```
-
-预期现象：
-
-- 输出中会同时包含“旅游行程规划”和“旅游商品推荐”两部分
-- 第一部分会参考 `travel-itinerary` skill
-- 第二部分会参考 `travel-shopping` skill
-
-## 自定义提示词
-
-```bash
-UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run \
-  --scenario itinerary \
-  --prompt "请读取 data/travel/destination-guide.md，为亲子家庭写一份北海涠洲岛四日轻松行程"
-```
+- `langgraph-skill` 用于展示 skill routing 的基本骨架
+- `langgraph-sql-skill` 会真实请求模型
+- SQL 请求应按需加载对应 skill，而不是预先加载全部领域说明
 
 ## 说明
 
-- 这个仓库当前没有提交锁文件更新；如果你执行了 `uv sync`，`uv.lock` 可能会变化。
-- 如果你想继续验证更多 skills，直接在 `skills/` 下新增目录和 `SKILL.md`，再把路径接到 `create_deep_agent(...)` 即可。
+- 这个项目的重点是“验证 skill 调用方式”，不是做完整生产功能
+- `DeepAgents` 和 `LangGraph` 这两套实现是并行示例，便于横向比较
+- 如果执行了 `uv sync`，`uv.lock` 可能变化

@@ -52,11 +52,21 @@ def build_skill_context_node(
     def load_context(state: SkillGraphState) -> SkillGraphState:
         skill_name = state.get("selected_skill")
         if not skill_name:
-            return {"skill_context": None}
+            return {
+                "skill_context": None,
+                "loaded_skills": state.get("loaded_skills", []),
+            }
 
         skill = registry.get(skill_name)
         if skill is None:
-            return {"skill_context": None}
+            return {
+                "skill_context": None,
+                "loaded_skills": state.get("loaded_skills", []),
+            }
+
+        loaded_skills = list(state.get("loaded_skills", []))
+        if skill.name not in loaded_skills:
+            loaded_skills.append(skill.name)
 
         context = (
             f"Skill: {skill.name}\n"
@@ -64,7 +74,7 @@ def build_skill_context_node(
             f"When to use: {skill.when_to_use}\n"
             f"Execution notes: {skill.context_text}"
         )
-        return {"skill_context": context}
+        return {"skill_context": context, "loaded_skills": loaded_skills}
 
     return load_context
 
