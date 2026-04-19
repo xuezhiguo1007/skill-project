@@ -27,10 +27,27 @@ UV_CACHE_DIR=/tmp/uv-cache uv sync
 ## 配置模型
 
 ```bash
-export OPENAI_API_KEY=your_key
+vim config/local.toml
 ```
 
-默认模型是 `gpt-4.1-mini`，也可以通过 `--model` 覆盖。
+填入你的模型配置：
+
+```toml
+[llm]
+default_model = "gpt-4.1-mini"
+openai_api_key = "your_key"
+openai_base_url = ""
+```
+
+默认读取 `local` 环境配置，也就是 `config/local.toml`。如果你要切环境，设置 `APP_ENV` 即可：
+
+```bash
+export APP_ENV=dev
+```
+
+支持的配置环境有：`dev`、`test`、`local`、`prod`。
+
+默认模型是配置文件里的 `default_model`，也可以通过 `--model` 覆盖。
 
 ## 启动 FastAPI
 

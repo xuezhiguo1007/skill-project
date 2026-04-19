@@ -1,0 +1,9 @@
+[app]
+api_title = "Skill Project"
+api_version = "0.1.0"
+api_description = "A FastAPI wrapper for validating local skills with an LLM."
+
+[llm]
+default_model = "gpt-4.1-mini"
+openai_api_key = "replace-with-local-key"
+openai_base_url = ""

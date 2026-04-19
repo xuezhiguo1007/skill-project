@@ -29,7 +29,7 @@ def parse_args() -> argparse.Namespace:
     run_parser.add_argument(
         "--model",
         default="gpt-4.1-mini",
-        help="OpenAI model name passed to ChatOpenAI.",
+        help="Override the configured OpenAI model name.",
     )
     run_parser.add_argument(
         "--prompt",

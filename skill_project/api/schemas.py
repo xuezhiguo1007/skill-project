@@ -61,9 +61,25 @@ class ScenarioRunReq(BaseModel):
     model: str | None = Field(default=None, description="Override the default model.")
 
 
+class LangGraphSkillReq(BaseModel):
+    user_request: str = Field(
+        ..., description="The user request routed through the LangGraph skill flow."
+    )
+
+
 class ValidationResult(BaseModel):
     scenario: str | None = None
     title: str | None = None
     model: str
     prompt: str
     response: str
+
+
+class LangGraphSkillResult(BaseModel):
+    user_request: str
+    available_skills: list[str]
+    selected_skill: str | None = None
+    route_reason: str | None = None
+    skill_context: str | None = None
+    skill_result: str | None = None
+    final_response: str | None = None

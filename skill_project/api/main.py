@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from skill_project.api.lifespan import lifespan_manager
 from skill_project.api.schemas import (
     CommonRes,
+    LangGraphSkillReq,
+    LangGraphSkillResult,
     ResCodeEnum,
     ScenarioRunReq,
     SkillItem,
@@ -12,6 +14,7 @@ from skill_project.api.schemas import (
     ValidationResult,
 )
 from skill_project.core.config import SETTINGS
+from skill_project.langgraph_skill.service import run_skill_graph
 from skill_project.services.skill_service import (
     SCENARIOS,
     list_skills,
@@ -71,6 +74,22 @@ async def validate_scenario(req: ScenarioRunReq) -> CommonRes[ValidationResult]:
         return CommonRes.success(ValidationResult(**result))
     except Exception as exc:
         logging.exception("[validate_scenario] failed")
+        return CommonRes.error(
+            code=ResCodeEnum.COMMON_ERROR.code,
+            message=str(exc),
+        )
+
+
+@app.post("/api/v1/langgraph-skill")
+async def run_langgraph_skill(
+    req: LangGraphSkillReq,
+) -> CommonRes[LangGraphSkillResult]:
+    logging.info("[run_langgraph_skill] request=%s", req.user_request)
+    try:
+        result = run_skill_graph(req.user_request)
+        return CommonRes.success(LangGraphSkillResult(**result))
+    except Exception as exc:
+        logging.exception("[run_langgraph_skill] failed")
         return CommonRes.error(
             code=ResCodeEnum.COMMON_ERROR.code,
             message=str(exc),

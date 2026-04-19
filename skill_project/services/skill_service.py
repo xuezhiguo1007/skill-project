@@ -1,11 +1,10 @@
 from __future__ import annotations
-
-import os
 from pathlib import Path
 from typing import Any
 
 from skill_project import PROJECT_ROOT, SKILLS_DIR
 from skill_project.core.config import SETTINGS
+from skill_project.llm import create_chat_model
 
 SCENARIOS = {
     "itinerary": {
@@ -74,12 +73,6 @@ def list_skills() -> list[dict[str, str]]:
     return payload
 
 
-def require_openai_api_key() -> None:
-    if os.getenv("OPENAI_API_KEY"):
-        return
-    raise RuntimeError("OPENAI_API_KEY is not set.")
-
-
 def extract_text(message: object) -> str:
     content = getattr(message, "content", message)
     if isinstance(content, str):
@@ -103,9 +96,8 @@ def extract_text(message: object) -> str:
 def build_agent(model_name: str | None = None) -> Any:
     from deepagents import create_deep_agent
     from deepagents.backends.filesystem import FilesystemBackend
-    from langchain_openai import ChatOpenAI
 
-    model = ChatOpenAI(model=model_name or SETTINGS.default_model, temperature=0)
+    model = create_chat_model(model_name)
     backend = FilesystemBackend(root_dir=PROJECT_ROOT, virtual_mode=True)
 
     return create_deep_agent(
@@ -142,7 +134,6 @@ def run_validation(
     model_name: str | None = None,
     scenario: str | None = None,
 ) -> dict[str, Any]:
-    require_openai_api_key()
     agent = build_agent(model_name)
     result = agent.invoke({"messages": [{"role": "user", "content": prompt}]})
     messages = result.get("messages", [])
