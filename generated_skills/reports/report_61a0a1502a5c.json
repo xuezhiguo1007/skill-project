@@ -1,0 +1,24 @@
+{
+  "report_id": "report_61a0a1502a5c",
+  "candidate_id": "skill_099d4cdc6a0a",
+  "average_score": 1.0,
+  "pass_rate": 1.0,
+  "min_required_average": 0.7,
+  "min_required_pass_rate": 0.8,
+  "passed": true,
+  "created_at": "2026-04-21T15:58:02.875468Z",
+  "results": [
+    {
+      "case_id": "case_1",
+      "request": "统计最近30天GMV趋势",
+      "output": "Request: 统计最近30天GMV趋势\n\nApplied skill: sales_sql_playbook\nDescription: 为重复任务沉淀可复用流程，常配合 load_skill 使用。\nWhen to use: 当用户请求属于 类似“帮我整理销售 SQL 分析步骤”的问题 这类场景时使用。\nChecklist:\n- Restate the goal and constraints.\n- Follow the documented procedure.\n- Check pitfalls before finalizing.\n- Run verification before returning.\nTrigger keywords: sql, sales, 帮我整理销售, 分析步骤\n",
+      "passed": true,
+      "score": 1.0,
+      "matched_keywords": [
+        "applied skill"
+      ],
+      "missing_keywords": [],
+      "violations": []
+    }
+  ]
+}

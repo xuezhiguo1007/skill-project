@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from skill_project.langgraph_skill.models import SkillSpec
+from skill_project.skill_evolution.bridge import load_active_skill_specs
 
 
 class SkillRegistry:
@@ -30,8 +31,24 @@ class SkillRegistry:
         return best_skill
 
 
+def build_registry(
+    base_skills: list[SkillSpec],
+    *,
+    include_generated_skills: bool = True,
+) -> SkillRegistry:
+    merged_skills = list(base_skills)
+    if include_generated_skills:
+        generated_skills = load_active_skill_specs()
+        existing_names = {skill.name for skill in merged_skills}
+        for skill in generated_skills:
+            if skill.name in existing_names:
+                continue
+            merged_skills.append(skill)
+    return SkillRegistry(merged_skills)
+
+
 def create_demo_registry() -> SkillRegistry:
-    return SkillRegistry(
+    return build_registry(
         [
             SkillSpec(
                 name="travel_itinerary",
@@ -71,7 +88,7 @@ def create_demo_registry() -> SkillRegistry:
 
 
 def create_sql_demo_registry() -> SkillRegistry:
-    return SkillRegistry(
+    return build_registry(
         [
             SkillSpec(
                 name="sales_analytics",

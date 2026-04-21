@@ -5,5 +5,5 @@ api_description = "A FastAPI wrapper for validating local skills with an LLM."
 
 [llm]
 default_model = "glm-5-no-think-fast"
-openai_api_key = "sk-9Tsyhrb8-zVUom91z-6JTWgCRR-zKwI2t7E"
-openai_base_url = "https://fastai.enncloud.cn/v1/"
+openai_api_key = ""
+openai_base_url = ""
