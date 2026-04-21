@@ -20,9 +20,11 @@ class Settings(BaseModel):
     api_description: str = Field(
         default="A FastAPI wrapper for validating local skills with an LLM."
     )
-    default_model: str = Field(default="gpt-4.1-mini")
-    openai_api_key: str = Field(default="")
-    openai_base_url: str | None = Field(default=None)
+    default_model: str = Field(default="glm-5-no-think-fast")
+    openai_api_key: str = Field(default="sk-9Tsyhrb8-zVUom91z-6JTWgCRR-zKwI2t7E")
+    openai_base_url: str | None = Field(
+        default="https://fastai.enncloud.cn/v1/chat/completions"
+    )
 
 
 def resolve_env() -> str:
