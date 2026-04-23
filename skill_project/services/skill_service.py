@@ -37,6 +37,18 @@ SCENARIOS = {
             "这部分如果更适合专业旅行购物顾问处理，请直接委托。"
         ),
     },
+    "skill-creator": {
+        "title": "模拟调用 skill-creator skill",
+        "prompt": (
+            "请帮我设计一个新的本地 skill，用于把零散的产品需求整理成可执行的开发任务说明。"
+            "请使用中文 Markdown 输出，并至少包含以下内容："
+            "1）skill 目标与触发场景；"
+            "2）SKILL.md 应该包含的关键结构；"
+            "3）2 到 3 条真实测试 prompt；"
+            "4）如何评估这个 skill 是否有效；"
+            "5）下一轮迭代应该优先优化什么。"
+        ),
+    },
 }
 
 
@@ -108,6 +120,8 @@ def build_agent(model_name: str | None = None) -> Any:
             "优先使用本地的旅游行程规划 skill。"
             "当任务涉及旅行装备、伴手礼、预算内采购或商品准备清单时，"
             "优先委托旅游商品推荐子代理处理。"
+            "当任务涉及创建新 skill、修改已有 skill、优化触发描述、设计测试用例、"
+            "评估 skill 效果或规划 skill 迭代时，优先使用本地的 skill-creator skill。"
             "如果用户一次要求多个交付物，请分节完成，并为每一部分使用最合适的 skill。"
         ),
         backend=backend,

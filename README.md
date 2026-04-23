@@ -35,6 +35,7 @@
 
 - `skills/travel-itinerary`
 - `skills/travel-shopping`
+- `skills/skill-creator`
 
 当前验证接口：
 
@@ -83,7 +84,9 @@ skill-project
 ├── skills
 │   ├── travel-itinerary
 │   │   └── SKILL.md
-│   └── travel-shopping
+│   ├── travel-shopping
+│   │   └── SKILL.md
+│   └── skill-creator
 │       └── SKILL.md
 ├── data
 │   └── travel
@@ -126,7 +129,8 @@ create_deep_agent(...)
     ↓
 本地 skills 目录
     ├── travel-itinerary
-    └── travel-shopping
+    ├── travel-shopping
+    └── skill-creator
 ```
 
 ### LangGraph 官方风格路径
@@ -228,6 +232,7 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario itinerary
 ```bash
 UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario shopping
 UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario dual-skills
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario skill-creator
 ```
 
 覆盖默认 prompt：
