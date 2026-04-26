@@ -86,3 +86,30 @@ class LangGraphSkillResult(BaseModel):
     skill_result: str | None = None
     final_response: str | None = None
 
+
+class EvolutionSkillItem(BaseModel):
+    skill_id: str
+    name: str
+    description: str
+    when_to_use: str
+    trigger_keywords: list[str] = Field(default_factory=list)
+    tags: list[str] = Field(default_factory=list)
+    example_queries: list[str] = Field(default_factory=list)
+    usage_count: int
+    version: int
+    content: str
+    created_at: str
+    updated_at: str
+    last_query: str
+
+
+class EvolutionSkillEvolveReq(BaseModel):
+    query: str = Field(..., description="Current user query used to evolve skills.")
+
+
+class EvolutionSkillEvolveResult(BaseModel):
+    action: str
+    reason: str
+    matched: bool
+    matched_score: float
+    skill: EvolutionSkillItem

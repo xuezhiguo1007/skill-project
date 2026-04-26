@@ -1,0 +1,25 @@
+{
+  "skill_id": "evo_skill_16286ffbdb1e",
+  "name": "帮我整理销售_sql_分析步骤",
+  "description": "围绕 帮我整理销售, sql, 分析步骤 场景沉淀出的可复用处理经验。",
+  "when_to_use": "当用户请求涉及 帮我整理销售, sql, 分析步骤 等主题，且与“帮我整理销售 SQL 分析步骤”这类问题相近时使用。",
+  "trigger_keywords": [
+    "帮我整理销售",
+    "sql",
+    "分析步骤"
+  ],
+  "tags": [
+    "帮我整理销售",
+    "sql",
+    "分析步骤"
+  ],
+  "example_queries": [
+    "帮我整理销售 SQL 分析步骤"
+  ],
+  "usage_count": 1,
+  "version": 1,
+  "content": "# 帮我整理销售_sql_分析步骤\n\n## Description\n围绕 帮我整理销售, sql, 分析步骤 场景沉淀出的可复用处理经验。\n\n## When to Use\n当用户请求涉及 帮我整理销售, sql, 分析步骤 等主题，且与“帮我整理销售 SQL 分析步骤”这类问题相近时使用。\n\n## Trigger Keywords\n帮我整理销售, sql, 分析步骤\n\n## Procedure\n1. 先复述目标、输入约束和输出格式。\n2. 提取关键实体、时间范围、过滤条件和验收标准。\n3. 优先复用已验证步骤，不临场发明新流程。\n4. 最终输出前检查边界条件和术语一致性。\n\n## Example Queries\n- 帮我整理销售 SQL 分析步骤",
+  "created_at": "2026-04-25T08:30:43.155583+00:00",
+  "updated_at": "2026-04-25T08:30:43.155583+00:00",
+  "last_query": "帮我整理销售 SQL 分析步骤"
+}

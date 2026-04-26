@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from skill_project.evolution_skill_loader import build_evolution_skill_service
 from skill_project.langgraph_skill.models import SkillSpec
 
 
@@ -36,6 +37,12 @@ def build_registry(
     include_generated_skills: bool = True,
 ) -> SkillRegistry:
     merged_skills = list(base_skills)
+    if include_generated_skills:
+        existing_names = {skill.name for skill in merged_skills}
+        for skill in build_evolution_skill_service().load_skill_specs():
+            if skill.name in existing_names:
+                continue
+            merged_skills.append(skill)
     return SkillRegistry(merged_skills)
 
 

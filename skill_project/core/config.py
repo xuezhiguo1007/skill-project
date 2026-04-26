@@ -20,7 +20,7 @@ class Settings(BaseModel):
     api_description: str = Field(
         default="A FastAPI wrapper for validating local skills with an LLM."
     )
-    default_model: str = Field(default="")
+    default_model: str = Field(default="glm-5.1")
     openai_api_key: str = Field(default="")
     openai_base_url: str | None = Field(default="")
 

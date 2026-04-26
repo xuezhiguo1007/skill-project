@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from skill_project.api.deep_agent_api import DeepAgentAPI
+from skill_project.api.evolution_skill_api import EvolutionSkillAPI
 from skill_project.api.langgraph_api import LangGraphAPI
 from skill_project.api.lifespan import lifespan_manager
 from skill_project.api.schemas import CommonRes
@@ -20,7 +21,9 @@ async def health() -> CommonRes[dict[str, str]]:
 
 
 deep_agent_api = DeepAgentAPI()
+evolution_skill_api = EvolutionSkillAPI()
 langgraph_api = LangGraphAPI()
 
 app.include_router(deep_agent_api.router)
+app.include_router(evolution_skill_api.router)
 app.include_router(langgraph_api.router)
