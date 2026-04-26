@@ -235,10 +235,8 @@ class EvolutionSkillService:
         )
 
     def _extract_skill_signals(self, query: str) -> KeywordExtractionResult:
-        model = create_chat_model(self.model_name).with_structured_output(
-            KeywordExtractionResult
-        )
-        return model.invoke(
+        return self._invoke_structured(
+            KeywordExtractionResult,
             [
                 (
                     "system",
@@ -251,7 +249,7 @@ class EvolutionSkillService:
                     "user",
                     f"请分析这条查询，并提取可复用的技能信号。\n\n查询内容：\n{query}",
                 ),
-            ]
+            ],
         )
 
     def _decide_match_or_create(
@@ -287,8 +285,8 @@ class EvolutionSkillService:
             ensure_ascii=False,
             indent=2,
         )
-        model = create_chat_model(self.model_name).with_structured_output(MatchDecision)
-        return model.invoke(
+        return self._invoke_structured(
+            MatchDecision,
             [
                 (
                     "system",
@@ -307,7 +305,7 @@ class EvolutionSkillService:
                     f"{candidates}\n\n"
                     "请返回最佳决策。",
                 ),
-            ]
+            ],
         )
 
     def _rewrite_skill(
@@ -322,10 +320,8 @@ class EvolutionSkillService:
             if skill is not None
             else "null"
         )
-        model = create_chat_model(self.model_name).with_structured_output(
-            SkillRewriteResult
-        )
-        result = model.invoke(
+        result = self._invoke_structured(
+            SkillRewriteResult,
             [
                 (
                     "system",
@@ -345,7 +341,7 @@ class EvolutionSkillService:
                     f"{existing_skill_json}\n\n"
                     "请重写或创建最终的可复用技能。",
                 ),
-            ]
+            ],
         )
         result.name = slugify_skill_name(result.name)
         if not result.trigger_keywords:
@@ -353,6 +349,58 @@ class EvolutionSkillService:
         if not result.tags:
             result.tags = extraction.tags[:4] or result.trigger_keywords[:4]
         return result
+
+    def _invoke_structured(
+        self,
+        schema: type[BaseModel],
+        messages: list[tuple[str, str]],
+    ) -> BaseModel:
+        model = create_chat_model(self.model_name)
+        try:
+            return model.with_structured_output(schema).invoke(messages)
+        except Exception:
+            fallback_messages = [
+                *messages,
+                (
+                    "user",
+                    "请严格只返回一个 JSON 对象，不要输出任何解释、标题、前后缀、代码块标记。"
+                    "返回结果必须能被 JSON.parse 直接解析，并且字段必须完整。"
+                    "JSON Schema 如下：\n"
+                    f"{json.dumps(schema.model_json_schema(), ensure_ascii=False, indent=2)}",
+                ),
+            ]
+            response = model.invoke(fallback_messages)
+            content = self._extract_json_object(getattr(response, "content", response))
+            return schema.model_validate_json(content)
+
+    def _extract_json_object(self, raw_content: Any) -> str:
+        if isinstance(raw_content, str):
+            text = raw_content.strip()
+        elif isinstance(raw_content, list):
+            parts: list[str] = []
+            for item in raw_content:
+                if isinstance(item, str):
+                    parts.append(item)
+                    continue
+                if isinstance(item, dict) and isinstance(item.get("text"), str):
+                    parts.append(item["text"])
+            text = "\n".join(parts).strip()
+        else:
+            text = str(raw_content).strip()
+
+        if not text:
+            raise ValueError("Model returned empty content for structured response.")
+
+        fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, flags=re.DOTALL)
+        if fenced:
+            return fenced.group(1)
+
+        start = text.find("{")
+        end = text.rfind("}")
+        if start != -1 and end != -1 and start < end:
+            return text[start : end + 1]
+
+        raise ValueError(f"Model did not return valid JSON content: {text}")
 
     def _save_skill(self, skill: EvolvedSkill) -> None:
         payload = json.dumps(skill.to_dict(), ensure_ascii=False, indent=2)
