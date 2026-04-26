@@ -76,6 +76,37 @@
 - loaded skill 是否能进入当前 agent state
 - 不同领域 skill 是否能被动态切换
 
+### 3. 自进化 skill
+
+这一套实现放在 `skill_project/evolution-skill/`、`skill_project/evolution_skill_loader.py` 和 `skill_project/api/evolution_skill_api.py`。
+
+核心特点：
+
+- 基于用户当前 query 自动抽取可复用的 skill 信号
+- 与 `generated_skills/evolution/skills` 里的已有 skill 做匹配
+- 未命中时创建新 skill
+- 命中但出现新范围、新示例或新触发词时更新已有 skill
+- 最终以本地 JSON 形式持久化，后续会自动并入 LangGraph skill registry
+
+调用方式：
+
+- `GET /api/v1/evolution-skills`：查看当前所有自进化生成的 skill
+- `POST /api/v1/evolution-skills/evolve`：输入一条 query，触发一次 skill 演化
+
+自进化流程：
+
+1. 接收用户 query，并做规范化。
+2. 让模型提取技能名、描述、触发词、标签、适用场景等结构化信号。
+3. 读取本地已进化 skill 列表，判断当前 query 是“复用已有 skill”“更新已有 skill”还是“创建新 skill”。
+4. 如果需要创建或更新，则生成最终的 `SKILL.md` 风格内容，并写入 `generated_skills/evolution/skills/*.json`。
+5. 后续 LangGraph registry 构建时，会自动把这些 evolved skill 加载进来参与匹配。
+
+适合验证的问题：
+
+- 系统能不能把零散 query 逐步沉淀成稳定 skill
+- 一个 skill 是否能随着后续 query 持续扩展
+- 新生成的 skill 是否能自动进入后续 skill 路由链路
+
 ## 项目结构图
 
 ```text
@@ -96,8 +127,13 @@ skill-project
     ├── api
     │   ├── main.py
     │   ├── deep_agent_api.py
+    │   ├── evolution_skill_api.py
     │   ├── langgraph_api.py
     │   └── schemas.py
+    ├── evolution-skill
+    │   ├── README.md
+    │   └── service.py
+    ├── evolution_skill_loader.py
     ├── services
     │   └── skill_service.py
     ├── llm
@@ -149,6 +185,24 @@ SkillMiddleware
 load_skill tool
     ↓
 按需加载 skill content
+```
+
+### 自进化 skill 路径
+
+```text
+Client
+    ↓
+evolution_skill_api.py
+    ↓
+evolution_skill_loader.py
+    ↓
+evolution-skill/service.py
+    ↓
+提取 query 信号 / 匹配已有 skill / 创建或更新 skill
+    ↓
+generated_skills/evolution/skills/*.json
+    ↓
+langgraph_skill/registry.py 按启动或调用时加载
 ```
 
 ## 安装依赖
@@ -210,6 +264,8 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python -m skill_project
 - `GET /api/v1/scenarios`
 - `POST /api/v1/validate-skill`
 - `POST /api/v1/run-scenario`
+- `GET /api/v1/evolution-skills`
+- `POST /api/v1/evolution-skills/evolve`
 - `POST /api/v1/langgraph-skill`
 - `POST /api/v1/langgraph-sql-skill`
 
@@ -288,6 +344,22 @@ curl -X POST http://127.0.0.1:8000/api/v1/langgraph-sql-skill \
   }'
 ```
 
+### 5. 触发一次自进化 skill
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/evolution-skills/evolve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "帮我整理一个适合亲子家庭的海岛四天三晚行程生成规则"
+  }'
+```
+
+### 6. 查看当前已进化 skill 列表
+
+```bash
+curl http://127.0.0.1:8000/api/v1/evolution-skills
+```
+
 ## 预期验证结果
 
 ### DeepAgents
@@ -301,6 +373,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/langgraph-sql-skill \
 - `langgraph-skill` 用于展示 skill routing 的基本骨架
 - `langgraph-sql-skill` 会真实请求模型
 - SQL 请求应按需加载对应 skill，而不是预先加载全部领域说明
+
+### 自进化 skill
+
+- `evolution-skills/evolve` 会基于当前 query 决定创建、更新或复用 skill
+- 新生成的 skill 会落到 `generated_skills/evolution/skills`
+- 后续构建 LangGraph registry 时，这些 evolved skill 会自动被加载
 
 ## 说明
 
