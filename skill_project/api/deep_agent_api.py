@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import importlib
+import importlib.metadata
 import logging
 
 from fastapi import APIRouter
 
 from skill_project.api.schemas import (
     CommonRes,
+    DeepAgentProfileCheckReq,
+    DeepAgentProfileCheckResult,
     ResCodeEnum,
     ScenarioRunReq,
     SkillItem,
@@ -62,6 +66,18 @@ class DeepAgentAPI:
                 "该接口不接收自定义 prompt。"
             ),
         )
+        self.router.add_api_route(
+            "/api/v1/deep-agent/profile-check",
+            self.check_profile_config,
+            methods=["POST"],
+            response_model=CommonRes[DeepAgentProfileCheckResult],
+            summary="验证 DeepAgents profiles 配置能力",
+            description=(
+                "检查当前 deepagents 版本是否支持 HarnessProfileConfig 和 "
+                "register_harness_profile。支持时会注册一份测试配置；不支持时返回"
+                "缺失符号和版本诊断。该接口不调用模型。"
+            ),
+        )
 
     async def get_skills(self) -> CommonRes[list[SkillItem]]:
         return CommonRes.success([SkillItem(**item) for item in list_skills()])
@@ -109,3 +125,76 @@ class DeepAgentAPI:
                 code=ResCodeEnum.COMMON_ERROR.code,
                 message=str(exc),
             )
+
+    async def check_profile_config(
+        self,
+        req: DeepAgentProfileCheckReq,
+    ) -> CommonRes[DeepAgentProfileCheckResult]:
+        """验证当前 deepagents profiles API 是否可用，并尝试注册测试配置。"""
+        logging.info("[check_profile_config] profile_key=%s", req.profile_key)
+        try:
+            result = self._check_profile_config(req)
+            return CommonRes.success(result)
+        except Exception as exc:
+            logging.exception("[check_profile_config] failed")
+            return CommonRes.error(
+                code=ResCodeEnum.COMMON_ERROR.code,
+                message=str(exc),
+            )
+
+    def _check_profile_config(
+        self,
+        req: DeepAgentProfileCheckReq,
+    ) -> DeepAgentProfileCheckResult:
+        required_symbols = [
+            "HarnessProfileConfig",
+            "register_harness_profile",
+        ]
+        version = importlib.metadata.version("deepagents")
+        required_version = ">=0.5.4"
+
+        deepagents = importlib.import_module("deepagents")
+        missing_symbols = [
+            symbol for symbol in required_symbols if not hasattr(deepagents, symbol)
+        ]
+        config = {
+            "system_prompt_suffix": req.system_prompt_suffix,
+            "excluded_tools": req.excluded_tools,
+            "excluded_middleware": req.excluded_middleware,
+            "general_purpose_subagent": {
+                "enabled": not req.disable_general_purpose_subagent
+            },
+        }
+
+        if missing_symbols:
+            return DeepAgentProfileCheckResult(
+                deepagents_version=version,
+                required_version=required_version,
+                supported=False,
+                registered=False,
+                profile_key=req.profile_key,
+                config=config,
+                message=(
+                    "Current deepagents package does not expose the documented "
+                    "profiles API. Upgrade deepagents before using YAML/JSON "
+                    "HarnessProfileConfig registration."
+                ),
+                missing_symbols=missing_symbols,
+            )
+
+        profile_config_cls = getattr(deepagents, "HarnessProfileConfig")
+        register_harness_profile = getattr(deepagents, "register_harness_profile")
+        register_harness_profile(
+            req.profile_key,
+            profile_config_cls.from_dict(config),
+        )
+
+        return DeepAgentProfileCheckResult(
+            deepagents_version=version,
+            required_version=required_version,
+            supported=True,
+            registered=True,
+            profile_key=req.profile_key,
+            config=config,
+            message="Harness profile config registered successfully.",
+        )

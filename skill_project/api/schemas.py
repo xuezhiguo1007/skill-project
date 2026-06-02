@@ -37,7 +37,7 @@ class CommonRes(BaseModel, Generic[T]):
         cls,
         code: int = ResCodeEnum.COMMON_ERROR.code,
         message: str = ResCodeEnum.COMMON_ERROR.message,
-    ) -> "CommonRes[None]":
+    ) -> "CommonRes[T]":
         return cls(code=code, message=message, data=None)
 
 
@@ -61,6 +61,29 @@ class ScenarioRunReq(BaseModel):
     model: str | None = Field(default=None, description="Override the default model.")
 
 
+class DeepAgentProfileCheckReq(BaseModel):
+    profile_key: str = Field(
+        default="openai:gpt-5.4",
+        description="Provider or provider:model key used to register a test profile.",
+    )
+    system_prompt_suffix: str = Field(
+        default="Respond briefly.",
+        description="Suffix used to validate HarnessProfileConfig serialization.",
+    )
+    excluded_tools: list[str] = Field(
+        default_factory=lambda: ["execute"],
+        description="Harness-level tools removed by the profile.",
+    )
+    excluded_middleware: list[str] = Field(
+        default_factory=lambda: ["SummarizationMiddleware"],
+        description="Middleware names removed by the profile.",
+    )
+    disable_general_purpose_subagent: bool = Field(
+        default=True,
+        description="Whether the test profile disables the general-purpose subagent.",
+    )
+
+
 class LangGraphSkillReq(BaseModel):
     user_request: str = Field(
         ..., description="The user request routed through the LangGraph skill flow."
@@ -74,6 +97,17 @@ class ValidationResult(BaseModel):
     model: str
     prompt: str
     response: str
+
+
+class DeepAgentProfileCheckResult(BaseModel):
+    deepagents_version: str
+    required_version: str
+    supported: bool
+    registered: bool
+    profile_key: str
+    config: dict
+    message: str
+    missing_symbols: list[str] = Field(default_factory=list)
 
 
 class LangGraphSkillResult(BaseModel):
