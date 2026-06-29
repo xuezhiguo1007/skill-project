@@ -36,6 +36,7 @@
 - `skills/travel-itinerary`
 - `skills/travel-shopping`
 - `skills/skill-creator`
+- `skills/worldcup-prediction`
 
 当前验证接口：
 
@@ -117,12 +118,16 @@ skill-project
 │   │   └── SKILL.md
 │   ├── travel-shopping
 │   │   └── SKILL.md
-│   └── skill-creator
+│   ├── skill-creator
+│   │   └── SKILL.md
+│   └── worldcup-prediction
 │       └── SKILL.md
 ├── data
-│   └── travel
-│       ├── destination-guide.md
-│       └── shopping-guide.md
+│   ├── travel
+│   │   ├── destination-guide.md
+│   │   └── shopping-guide.md
+│   └── worldcup
+│       └── reference-guide.md
 └── skill_project
     ├── api
     │   ├── main.py
@@ -289,6 +294,7 @@ UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario itinerary
 UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario shopping
 UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario dual-skills
 UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario skill-creator
+UV_CACHE_DIR=/tmp/uv-cache uv run python main.py run --scenario worldcup-prediction
 ```
 
 覆盖默认 prompt：
@@ -360,6 +366,28 @@ curl -X POST http://127.0.0.1:8000/api/v1/evolution-skills/evolve \
 curl http://127.0.0.1:8000/api/v1/evolution-skills
 ```
 
+### 7. 验证世界杯比分预测 skill
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/run-scenario \
+  -H "Content-Type: application/json" \
+  -d '{
+    "scenario": "worldcup-prediction",
+    "model": "gpt-4.1-mini"
+  }'
+```
+
+或者使用自定义对阵：
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/v1/validate-skill \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "glm-5-no-think-fast",
+    "prompt": "请预测以下世界杯对阵的比分：巴西 vs 阿根廷、法国 vs 德国、英格兰 vs 西班牙。基于FIFA排名、历史战绩、球员状态进行分层概率分析，输出明确比分。"
+  }'
+```
+
 ## 预期验证结果
 
 ### DeepAgents
@@ -367,6 +395,7 @@ curl http://127.0.0.1:8000/api/v1/evolution-skills
 - `validate-skill` 能直接执行自定义 prompt
 - `run-scenario` 会读取服务端预置 prompt 再执行
 - 旅游相关场景应命中 `travel-itinerary` 或 `travel-shopping`
+- 世界杯比分预测场景应命中 `worldcup-prediction`
 
 ### LangGraph
 

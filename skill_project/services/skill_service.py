@@ -49,6 +49,19 @@ SCENARIOS = {
             "5）下一轮迭代应该优先优化什么。"
         ),
     },
+    "worldcup-prediction": {
+        "title": "模拟调用世界杯比分预测 skill",
+        "prompt": (
+            "请预测以下世界杯对阵的比分：\n"
+            "巴西 vs 阿根廷\n"
+            "法国 vs 德国\n"
+            "英格兰 vs 西班牙\n"
+            "请读取 data/worldcup/reference-guide.md，"
+            "基于FIFA排名、历史战绩、球员状态等核心变量进行分层概率分析。"
+            "每场对阵输出明确的预测比分，并给出胜负平倾向和概率区间。"
+            "输出必须使用中文 Markdown，并严格遵循对应 skill 中要求的结构。"
+        ),
+    },
 }
 
 
@@ -122,6 +135,9 @@ def build_agent(model_name: str | None = None) -> Any:
             "优先委托旅游商品推荐子代理处理。"
             "当任务涉及创建新 skill、修改已有 skill、优化触发描述、设计测试用例、"
             "评估 skill 效果或规划 skill 迭代时，优先使用本地的 skill-creator skill。"
+            "当任务涉及世界杯足球比赛比分预测、国家队对阵分析、足球赛事概率预测时，"
+            "优先使用本地的世界杯比分预测 skill，基于FIFA排名、历史战绩、球员状态等"
+            "核心变量进行分层概率分析，并输出明确的预测比分。"
             "如果用户一次要求多个交付物，请分节完成，并为每一部分使用最合适的 skill。"
         ),
         backend=backend,
