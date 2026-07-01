@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Generated skills data (keep structure, ignore content)
+generated_skills/*/predictions/*.json
+generated_skills/*/results/*.json

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 # 添加项目路径
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from skill_project.services.skill_service import run_validation
 from skill_project.core.config import SETTINGS
@@ -45,15 +45,34 @@ class WorldCupPredictionRecorder:
         Returns:
             预测结果字典
         """
-        # 构建prompt
+        # 构建prompt（优化版：明确要求输出完整报告）
         if prompt is None:
             matchup_str = "\n".join(matchups)
             prompt = (
-                f"请预测以下世界杯对阵的比分：\n{matchup_str}\n"
-                "请读取 data/worldcup/reference-guide.md，"
-                "基于FIFA排名、历史战绩、球员状态等核心变量进行分层概率分析。"
-                "每场对阵输出明确的预测比分，并给出胜负平倾向和概率区间。"
-                "输出必须使用中文 Markdown，并严格遵循对应 skill 中要求的结构。"
+                f"请预测以下世界杯对阵的比分：\n{matchup_str}\n\n"
+                "**重要要求：**\n"
+                "1. **必须输出完整的预测报告，不要只返回简短总结！**\n"
+                "2. 必须包含「预测汇总表」章节，格式如下：\n"
+                "| 对阵 | 推荐比分 | 胜负平倾向 | 主胜概率 | 平局概率 | 客胜概率 | 预测信心 |\n"
+                "|------|----------|------------|----------|----------|----------|----------|\n"
+                "| 科特迪瓦 vs 挪威 | **1-2** | 客胜 | 22-25% | 30-32% | 45-55% | ⭐⭐⭐ |\n\n"
+                "3. 每场对阵必须给出明确比分（如 2-1、1-1、3-0），不要使用模糊表述\n"
+                "4. 必须包含胜负平倾向（主胜/客胜/平局）和概率区间（如 主胜65-75%）\n"
+                "5. 基于FIFA排名、历史战绩、球员状态等核心变量进行分析\n"
+                "6. 如果无法搜索最新数据，请基于你的足球知识库进行分析，不要跳过\n"
+                "7. 使用中文 Markdown 格式输出\n\n"
+                "**输出结构示例：**\n"
+                "# 🏆 世界杯足球比分预测报告\n\n"
+                "## 对阵一：科特迪瓦 vs 挪威\n"
+                "### 一、基础参考研判\n"
+                "...（FIFA排名、历史战绩等）\n"
+                "### 四、预测比分\n"
+                "**📌 最终推荐比分：1-2（挪威胜）**\n\n"
+                "---\n\n"
+                "## 📊 预测汇总表\n"
+                "| 对阵 | 推荐比分 | 胜负平倾向 | 主胜概率 | 平局概率 | 客胜概率 | 预测信心 |\n"
+                "...（所有对阵）\n\n"
+                "**再次强调：必须输出完整的预测报告和汇总表，不要只返回简短总结！**"
             )
 
         # 执行预测
@@ -94,7 +113,7 @@ class WorldCupPredictionRecorder:
         self, response: str, matchups: list[str]
     ) -> dict[str, dict[str, Any]]:
         """
-        解析预测结果
+        解析预测结果（改进版）
 
         Args:
             response: 模型响应文本
@@ -103,11 +122,19 @@ class WorldCupPredictionRecorder:
         Returns:
             解析后的预测字典
         """
+        import re
+
         predictions = {}
 
+        # 策略1: 优先解析预测汇总表（结构化数据）
+        table_data = self._parse_summary_table(response)
+
+        # 策略2: 如果汇总表解析失败，按对阵章节解析
+        if not table_data:
+            table_data = self._parse_by_sections(response, matchups)
+
+        # 组装最终结果
         for matchup in matchups:
-            # 提取该对阵的预测信息
-            # 简化解析：通过正则或字符串匹配提取比分
             pred_info = {
                 "matchup": matchup,
                 "predicted_score": None,
@@ -117,31 +144,133 @@ class WorldCupPredictionRecorder:
                 "raw_response": response,
             }
 
-            # 尝试从响应中提取比分
-            # 格式可能是: "预测比分：2-1" 或 "| 巴西 vs 阿根廷 | 2-1 |"
-            import re
-
-            # 匹配比分模式 (如 2-1, 1-1, 0-0等)
-            score_pattern = r"预测比分[：:]\s*(\d+-\d+|\d+-\d+\s*或\s*\d+-\d+)"
-            score_match = re.search(score_pattern, response)
-            if score_match:
-                pred_info["predicted_score"] = score_match.group(1).strip()
-
-            # 匹配胜负倾向
-            tendency_pattern = r"胜负平倾向[：:]\s*(主胜|客胜|平局|巴西胜|阿根廷胜)"
-            tendency_match = re.search(tendency_pattern, response)
-            if tendency_match:
-                pred_info["tendency"] = tendency_match.group(1).strip()
-
-            # 匹配概率区间
-            prob_pattern = r"概率区间[：:]\s*(\d+%-?\d+%)"
-            prob_match = re.search(prob_pattern, response)
-            if prob_match:
-                pred_info["probability_range"] = prob_match.group(1).strip()
+            # 从解析结果中提取
+            if matchup in table_data:
+                pred_info.update(table_data[matchup])
 
             predictions[matchup] = pred_info
 
         return predictions
+
+    def _parse_summary_table(self, response: str) -> dict[str, dict[str, Any]]:
+        """
+        解析预测汇总表（优先策略）
+
+        格式示例：
+        | 对阵 | 推荐比分 | 胜负平倾向 | 主胜概率 | 平局概率 | 客胜概率 | 预测信心 |
+        | 科特迪瓦 vs 挪威 | **1-2** | 客胜 | 22-25% | 30-32% | 45-55% | ⭐⭐⭐ |
+
+        Args:
+            response: 响应文本
+
+        Returns:
+            解析结果字典
+        """
+        import re
+
+        table_data = {}
+
+        # 匹配汇总表标题
+        table_header_pattern = r"## 📊 预测汇总表"
+        if not re.search(table_header_pattern, response):
+            return {}
+
+        # 匹配表格行（支持 **比分** 加粗格式）
+        # 格式: | 对阵 | **比分** | 倾向 | 主胜% | 平局% | 客胜% | 信心 |
+        row_pattern = r"\|\s*([^|]+?)\s*\|\s*\*{0,2}([^*|]+?)\*{0,2}\s*\|\s*(\w+)\s*\|\s*([\d-]+%)\s*\|\s*([\d-]+%)\s*\|\s*([\d-]+%)\s*\|\s*(⭐+)\s*\|"
+
+        matches = re.findall(row_pattern, response)
+
+        for match in matches:
+            matchup, score, tendency, home_prob, draw_prob, away_prob, confidence = match
+
+            # 清理对阵名称（去除多余空格）
+            matchup = matchup.strip()
+
+            # 组合概率区间
+            probability_range = f"主胜{home_prob}|平局{draw_prob}|客胜{away_prob}"
+
+            table_data[matchup] = {
+                "predicted_score": score.strip(),
+                "tendency": tendency.strip(),
+                "probability_range": probability_range,
+                "confidence": confidence.strip(),
+            }
+
+        return table_data
+
+    def _parse_by_sections(self, response: str, matchups: list[str]) -> dict[str, dict[str, Any]]:
+        """
+        按对阵章节解析（备用策略）
+
+        格式示例：
+        ## 对阵一：科特迪瓦 vs 挪威
+        ...
+        **📌 最终推荐比分：1-2（挪威胜）**
+
+        Args:
+            response: 响应文本
+            matchups: 对阵列表
+
+        Returns:
+            解析结果字典
+        """
+        import re
+
+        section_data = {}
+
+        for matchup in matchups:
+            # 找到该对阵的章节（支持"对阵一："、"对阵二："等标题）
+            # 使用模糊匹配：找到包含对阵名称的标题行到下一个 "---" 之间的内容
+            section_pattern = rf"## 对阵[^:]*[：:]\s*{re.escape(matchup)}.*?---"
+            section_match = re.search(section_pattern, response, re.DOTALL | re.IGNORECASE)
+
+            if not section_match:
+                continue
+
+            section_text = section_match.group(0)
+
+            # 在章节内解析比分
+            # 格式1: **📌 最终推荐比分：1-2（挪威胜）**
+            # 格式2: **📌 最终推荐比分：1-2**
+            score_pattern = r"\*{0,2}📌\s*最终推荐比分[：:]([^*（\n]+)"
+            score_match = re.search(score_pattern, section_text)
+
+            if score_match:
+                score = score_match.group(1).strip()
+                # 清理括号内容（如 "(挪威胜)"）
+                score = re.sub(r"\（[^）]+\）", "", score).strip()
+                score = re.sub(r"\([^)]+\)", "", score).strip()
+
+                section_data[matchup] = {
+                    "predicted_score": score,
+                }
+
+            # 解析胜负倾向（从分层概率预测表格）
+            # 格式: | **平衡型** | 客胜倾向 | 主胜25%-平局30%-客胜45% |
+            tendency_pattern = r"\|\s*\*{0,2}平衡型\*{0,2}\s*\|\s*(\w+)\s*\|\s*主胜([\d-]+%)-平局([\d-]+%)-客胜([\d-]+%)\s*\|"
+            tendency_match = re.search(tendency_pattern, section_text)
+
+            if tendency_match:
+                tendency = tendency_match.group(1)
+                home_prob = tendency_match.group(2)
+                draw_prob = tendency_match.group(3)
+                away_prob = tendency_match.group(4)
+
+                probability_range = f"主胜{home_prob}|平局{draw_prob}|客胜{away_prob}"
+
+                if matchup in section_data:
+                    section_data[matchup].update({
+                        "tendency": tendency,
+                        "probability_range": probability_range,
+                    })
+                else:
+                    section_data[matchup] = {
+                        "tendency": tendency,
+                        "probability_range": probability_range,
+                    }
+
+        return section_data
 
     def _save_record(self, record_data: dict[str, Any]) -> Path:
         """
@@ -194,12 +323,12 @@ def main():
         "--matchups",
         nargs="+",
         required=True,
-        help="对阵列表，如：'巴西 vs 阿根廷' '法国 vs 德国'",
+        help="对阵列表，如：'巴西 vs 日本' '德国 vs 巴拉圭' '荷兰 vs 摩洛哥'",
     )
     parser.add_argument(
         "--model",
         default=None,
-        help="使用的模型名称（默认使用配置文件中的模型）",
+        help="glm-5-no-think-fast",
     )
     parser.add_argument(
         "--prompt",
