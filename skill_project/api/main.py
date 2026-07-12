@@ -6,6 +6,7 @@ from skill_project.api.langgraph_api import LangGraphAPI
 from skill_project.api.lifespan import lifespan_manager
 from skill_project.api.schemas import CommonRes
 from skill_project.core.config import SETTINGS
+from skill_project.hongloumeng_schedule.api import router as hongloumeng_router
 
 app = FastAPI(
     title=SETTINGS.api_title,
@@ -27,3 +28,4 @@ langgraph_api = LangGraphAPI()
 app.include_router(deep_agent_api.router)
 app.include_router(evolution_skill_api.router)
 app.include_router(langgraph_api.router)
+app.include_router(hongloumeng_router)
